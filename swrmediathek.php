@@ -32,24 +32,12 @@ class SynoFileHostingSWRMediathek extends TheiNaDProvider {
             return false;
         }
 
-        $curl = curl_init();
+        $rawXML = $this->curlRequest("https://www.swrmediathek.de/fbplayerparams/" . $match[1] . "/clips.xml");
 
-        curl_setopt($curl, CURLOPT_URL, "https://www.swrmediathek.de/fbplayerparams/" . $match[1] . "/clips.xml");
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl, CURLOPT_USERAGENT, DOWNLOAD_STATION_USER_AGENT);
-        curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-
-        $rawXML = curl_exec($curl);
-
-        if(!$rawXML)
+        if($rawXML === null)
         {
-            $this->DebugLog("Failed to retrieve Website. Error Info: " . curl_error($curl));
             return false;
         }
-
-        curl_close($curl);
 
         $title = "";
         $match = array();
