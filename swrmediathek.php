@@ -2,19 +2,16 @@
 
 /**
  * @author Daniel Gehn <me@theinad.com>
- * @version 0.1
+ * @version 0.2a
  * @copyright 2015 Daniel Gehn
  * @license http://opensource.org/licenses/MIT Licensed under MIT License
  */
 
-class SynoFileHostingSWRMediathek {
-    private $Url;
-    private $Username;
-    private $Password;
-    private $HostInfo;
+require_once "provider.php";
 
-    private $LogPath = '/tmp/swr-mediathek.log';
-    private $LogEnabled = false;
+class SynoFileHostingSWRMediathek extends TheiNaDProvider {
+
+    protected $LogPath = '/tmp/swr-mediathek.log';
 
     protected static $qualities = array(
         's' => 1,
@@ -23,39 +20,8 @@ class SynoFileHostingSWRMediathek {
         'xl' => 4
     );
 
-    public function __construct($Url, $Username = '', $Password = '', $HostInfo = '') {
-        $this->Url = $Url;
-        $this->Username = $Username;
-        $this->Password = $Password;
-        $this->HostInfo = $HostInfo;
-
-        $this->DebugLog("URL: $Url");
-    }
-
     //This function returns download url.
     public function GetDownloadInfo() {
-        $ret = FALSE;
-
-        $this->DebugLog("GetDownloadInfo called");
-
-        $ret = $this->Download();
-
-        return $ret;
-    }
-
-    public function onDownloaded()
-    {
-    }
-
-    public function Verify($ClearCookie = '')
-    {
-        $this->DebugLog("Verifying User");
-
-        return USER_IS_PREMIUM;
-    }
-
-    //This function gets the download url
-    private function Download() {
         $this->DebugLog("Getting download url $this->Url");
 
         preg_match('#show=([0-9a-z\-]+)#i', $this->Url, $match);
@@ -84,6 +50,24 @@ class SynoFileHostingSWRMediathek {
         }
 
         curl_close($curl);
+
+        $title = "";
+        $match = array();
+
+        if(preg_match('#<channel>\s*<title>(.*?)<\/title>#is', $rawXML, $match) == 1) {
+            $title = $match[1];
+        }
+
+        $subtitle = "";
+        $match = array();
+
+        if(preg_match('#<item>\s*<title>(.*?)<\/title>#is', $rawXML, $match) == 1) {
+            $subtitle = $match[1];
+        }
+
+        if(!empty($subtitle)) {
+            $title .= ' - ' . $subtitle;
+        }
 
         if(preg_match('#media:content\s*url="(.*?)"#si', $rawXML, $match) === 1)
         {
@@ -128,31 +112,45 @@ class SynoFileHostingSWRMediathek {
                 curl_close($curl);
                 unset($curl);
 
+                $url = trim($bestUrl);
+
                 $DownloadInfo = array();
-                $DownloadInfo[DOWNLOAD_URL] = trim($bestUrl);
+                $DownloadInfo[DOWNLOAD_URL] = $url;
+                $DownloadInfo[DOWNLOAD_FILENAME] = $this->buildFilename($url, $title);
 
                 return $DownloadInfo;
             }
 
-            $this->DebugLog("Couldn't identify media quality" . $baseurl);
+            $url = trim($baseurl);
+
+            $this->DebugLog("Couldn't identify media quality" . $url);
 
             $DownloadInfo = array();
-            $DownloadInfo[DOWNLOAD_URL] = trim($baseurl);
+            $DownloadInfo[DOWNLOAD_URL] = $url;
+            $DownloadInfo[DOWNLOAD_FILENAME] = $this->buildFilename($url, $title);
 
             return $DownloadInfo;
         }
 
         $this->DebugLog("Couldn't identify media file" . PHP_EOL . $rawXML);
 
-        return FALSE;
+        return false;
     }
 
-    private function DebugLog($message)
-    {
-        if($this->LogEnabled === true)
+    protected function buildFilename($url, $title = "") {
+        $pathinfo = pathinfo($url);
+
+        if(!empty($title))
         {
-            file_put_contents($this->LogPath, $message . "\n", FILE_APPEND);
+            $filename = $title . '.' . $pathinfo['extension'];
         }
+        else
+        {
+            $filename =  $pathinfo['basename'];
+        }
+
+        return $this->safeFilename($filename);
     }
+
 }
 ?>

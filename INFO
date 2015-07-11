@@ -2,7 +2,7 @@
     "name": "swrmediathek",
     "hostprefix": "swrmediathek.de",
     "displayname": "SWR Mediathek",
-    "version": "0.1",
+    "version": "0.2a",
     "authentication": "no",
     "module": "swrmediathek.php",
     "class": "SynoFileHostingSWRMediathek",
